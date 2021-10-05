@@ -26,55 +26,97 @@ int main() {
   pipe(fd);
 
   if (0 > (pid = fork())) {
-    perror("");
+    perror("ERROR");
     exit(1);
   }
 
   if (pid == 0) {  // Child 1: -------------------------------------------------
     int i = 0;
-
-    printf("Child 1 PID: %ld\n", (long)getpid());
+    pid_t pidChild2;
+    printf("Child 1 PID: %d\n", getpid());
     close(fd[1]);
-    sleep(1);  // To deal with concurrence
+    pause();
+
+    if(0 > read(fd[0], &pidChild2, sizeof(int))) {
+      perror("ERROR");
+      exit(1);
+    }
+    
     while (i < 5) {
-      nbytes = read(fd[0], &dato, sizeof(int));  // Reads from pipe 0
+      if (0 > (nbytes = read(fd[0], &dato, sizeof(int)))) {
+        perror("ERROR");
+        exit(1);
+      }  // Reads from pipe 0
       printf("Received string from child 1: %d\n", dato);
-      i++;
-      kill(getppid() + 2, SIGUSR1);
+      fflush(stdout);
+      if (0 > (kill(pidChild2, SIGUSR1))) {
+        perror("ERROR");
+        exit(1);
+      }
       pause();
+      i++;
     }
     exit(0);
   }
 
+  write(fd[1], &pid, sizeof(int));  // Saves the child PID
   if (0 > (pid = fork())) {
-  perror("");
+  perror("ERROR");
   exit(1);
   }
 
   if (pid == 0) {  // Child 2: -------------------------------------------------
     int i = 0;
-    printf("Child 2 PID: %ld\n", (long)getpid());
-
+    pid_t pidChild1;
+    printf("Child 2 PID: %d\n",getpid());
     close(fd[1]);
+    if (0 > read(fd[0], &pidChild1, sizeof(int))) {
+      perror("ERROR");
+      exit(1);
+    }
+    if (0 > (kill(pidChild1, SIGUSR1))) {
+      perror("ERROR");
+      exit(1);
+    }
 
     while (i < 5) {
       pause();
-      nbytes = read(fd[0], &dato, sizeof(int));  // Reads from pipe 0
+      if(0 > (nbytes = read(fd[0], &dato, sizeof(int)))) {
+        perror("ERROR");
+        exit(1);
+      }   // Reads from pipe 0
       printf("Received string from child 2: %d\n", dato);
+      fflush(stdout);
+      if (0 > (kill(pidChild1, SIGUSR1))) {
+        perror("ERROR");
+        exit(1);
+    }
       i++;
-      kill(getppid() + 1, SIGUSR1);
     }
     exit(0);
 }
+  if (0 > write(fd[1], &pid, sizeof(int))) {
+    perror("ERROR");
+    exit(1);
+  }  // Saves the child PID
 
   // Parent: ------------------------------------------------------------------
   close(fd[0]);
-  while (dato < 11) {
-    write(fd[1], &dato, sizeof(int));
+  int j = 0;
+  while (j < 10) {
+    if (0 > write(fd[1], &dato, sizeof(int))) {
+      perror("ERROR");
+      exit(1);
+    }
     dato++;
+    j++;
   }
-  printf("Parent PID: %ld\n", (long)getpid());
-  wait(NULL);
+  printf("Parent PID: %d\n", getpid());
+  fflush(stdout);
+  if(0 > wait(NULL)) {
+    perror("ERROR");
+    exit(1);
+  }
 
   return 0;
 }
