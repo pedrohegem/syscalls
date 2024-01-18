@@ -1,1 +1,1 @@
-Just a bunch of solved Operating System problems written in C and using Unix system calls.
+Just a bunch of solved Operating System exercises written in C and using Unix system calls.
